@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Film Randomizer</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      background: black;
+      color: white;
+      font-family: Calibri, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 12px;
+      width: 90%;
+      max-width: 500px;
+    }
+    select {
+      padding: 10px 16px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #filmCard {
+      margin-top: 30px;
+      margin-bottom: 220px;
+      line-height: 1.4;
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 0 20px;
+    }
+    #filmTitle    { font-size: 32px; font-weight: bold; line-height: 1.2; }
+    #filmYear     { font-size: 20px; margin-left: 8px; font-weight: normal; }
+    #filmRuntime  { font-size: 18px; margin-top: 8px; color: #ccc; }
+    #filmGenre    { font-size: 18px; margin-top: 4px; color: #ccc; }
+    #filmDirector { font-size: 16px; margin-top: 4px; color: #aaa; }
+    #filmStyle    { font-size: 14px; margin-top: 6px; color: #666; letter-spacing: 0.05em; text-transform: uppercase; }
+    #randomButton {
+      position: fixed; bottom: 30px;
+      padding: 20px 40px; font-size: 24px;
+      cursor: pointer; border: none;
+      background: white; color: black; border-radius: 10px;
+      touch-action: manipulation;
+    }
+    #seenButton {
+      position: fixed; bottom: 110px;
+      padding: 8px 16px; font-size: 13px;
+      cursor: pointer; border: none;
+      background: white; color: black; border-radius: 8px;
+      display: none;
+      touch-action: manipulation;
+    }
+    #status {
+      position: fixed; bottom: 155px;
+      font-size: 13px; color: #aaa; display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="filters">
+    <!-- Order: Directors, Decades, Genres, Current, Runtime, Style -->
+    <select id="directorFilter"><option value="All">All Directors</option></select>
+    <select id="decadeFilter"><option value="All">All Decades</option></select>
+    <select id="genreFilter"><option value="All">All Genres</option></select>
+    <select id="currentFilter"><option value="All">All Movements</option></select>
+    <select id="runtimeFilter">
+      <option value="All">Any Runtime</option>
+      <option value="short">Short (&lt;90 min)</option>
+      <option value="medium">Medium (90–120 min)</option>
+      <option value="long">Long (&gt;120 min)</option>
+    </select>
+    <select id="styleFilter">
+      <option value="All">All Styles</option>
+      <option value="Arthouse">Arthouse</option>
+      <option value="Normal">Normal</option>
+    </select>
+  </div>
+
+  <div id="filmCard">
+    <div id="filmTitle"></div>
+    <div id="filmRuntime"></div>
+    <div id="filmGenre"></div>
+    <div id="filmDirector"></div>
+    <div id="filmStyle"></div>
+  </div>
+
+  <div id="status"></div>
+  <button id="seenButton">Mark as Seen</button>
+  <button id="randomButton">Randomize</button>
+
+  <script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyINoulc8xeElEXww186e1dsMv4LZTjkwhJJDhBeyDmzpDEcsCMVV6Pm-0FFSPvtydL/exec";
+
+    // Column mapping (must match sheet headers exactly):
+    // ID | Name | Year | Runtime | Director | Movement | Genre | Style | Seen
+
+    let allFilms      = [];
+    let shuffledFilms = [];
+    let currentIndex  = 0;
+    let currentFilm   = null;
+    let ready         = false;
+
+    const filmTitleEl    = document.getElementById('filmTitle');
+    const filmRuntimeEl  = document.getElementById('filmRuntime');
+    const filmGenreEl    = document.getElementById('filmGenre');
+    const filmDirectorEl = document.getElementById('filmDirector');
+    const filmStyleEl    = document.getElementById('filmStyle');
+    const filmCardEl     = document.getElementById('filmCard');
+    const randomButton   = document.getElementById('randomButton');
+    const seenButton     = document.getElementById('seenButton');
+    const directorFilter = document.getElementById('directorFilter');
+    const decadeFilter   = document.getElementById('decadeFilter');
+    const genreFilter    = document.getElementById('genreFilter');
+    const currentFilter  = document.getElementById('currentFilter');
+    const runtimeFilter  = document.getElementById('runtimeFilter');
+    const styleFilter    = document.getElementById('styleFilter');
+    const statusEl       = document.getElementById('status');
+
+    const allSelects = [directorFilter, decadeFilter, genreFilter, currentFilter, runtimeFilter, styleFilter];
+
+    function showStatus(msg, duration = 2500) {
+      statusEl.textContent = msg;
+      statusEl.style.display = 'block';
+      setTimeout(() => { statusEl.style.display = 'none'; }, duration);
+    }
+
+    function formatRuntime(mins) {
+      const m = parseInt(mins);
+      if (isNaN(m) || m === 0) return '';
+      const h = Math.floor(m / 60);
+      const r = m % 60;
+      if (h === 0) return `${r}m`;
+      if (r === 0) return `${h}h`;
+      return `${h}h ${r}m`;
+    }
+
+    function runtimeBucket(mins) {
+      const m = parseInt(mins);
+      if (isNaN(m) || m === 0) return null;
+      if (m < 90)   return 'short';
+      if (m <= 120) return 'medium';
+      return 'long';
+    }
+
+    function getDecade(year) {
+      const y = parseInt(year);
+      if (isNaN(y)) return null;
+      return Math.floor(y / 10) * 10;
+    }
+
+    function getFiltered() {
+      const dir = directorFilter.value;
+      const dec = decadeFilter.value;
+      const g   = genreFilter.value;
+      const cur = currentFilter.value;
+      const rt  = runtimeFilter.value;
+      const sty = styleFilter.value;
+
+      return allFilms.filter(f => {
+        if (String(f.Seen).trim() === "Yes")                      return false;
+        if (dir !== "All" && String(f.Director).trim() !== dir)   return false;
+        if (dec !== "All" && String(getDecade(f.Year)) !== dec)   return false;
+        if (g   !== "All" && String(f.Genre).trim() !== g)        return false;
+        if (cur !== "All" && String(f.Movement).trim() !== cur)    return false;
+        if (rt  !== "All" && runtimeBucket(f.Runtime) !== rt)     return false;
+        if (sty !== "All" && String(f.Style).trim() !== sty)      return false;
+        return true;
+      });
+    }
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function rebuildShuffled() {
+      shuffledFilms = shuffle(getFiltered());
+      currentIndex = 0;
+    }
+
+    function pickRandomFilm() {
+      if (currentIndex >= shuffledFilms.length) rebuildShuffled();
+
+      if (shuffledFilms.length === 0) {
+        filmCardEl.style.display = "none";
+        seenButton.style.display = "none";
+        randomButton.textContent = "Randomize";
+        alert("No unseen films match the current filter!");
+        return;
+      }
+
+      currentFilm = shuffledFilms[currentIndex++];
+      filmTitleEl.innerHTML = `${currentFilm.Name} <span id="filmYear">(${currentFilm.Year})</span>`;
+      filmRuntimeEl.textContent = formatRuntime(currentFilm.Runtime);
+      filmGenreEl.textContent = '';
+      filmDirectorEl.textContent = currentFilm.Director ? "Directed by " + currentFilm.Director : '';
+      filmStyleEl.textContent = [currentFilm.Genre, currentFilm.Style].filter(Boolean).join(', ');
+      filmCardEl.style.display  = "flex";
+      seenButton.style.display  = "block";
+      randomButton.textContent  = "Randomize Again";
+    }
+
+    function populateFilters() {
+      allSelects.forEach(s => s.removeEventListener('change', onFilterChange));
+
+      const directors = Array.from(new Set(allFilms.map(f => String(f.Director).trim()).filter(Boolean))).sort();
+      directorFilter.innerHTML = '<option value="All">All Directors</option>';
+      directors.forEach(d => {
+        const o = document.createElement('option');
+        o.value = d; o.textContent = d;
+        directorFilter.appendChild(o);
+      });
+
+      const decades = Array.from(new Set(allFilms.map(f => getDecade(f.Year)).filter(d => d !== null))).sort((a,b) => a - b);
+      decadeFilter.innerHTML = '<option value="All">All Decades</option>';
+      decades.forEach(dec => {
+        const o = document.createElement('option');
+        o.value = String(dec); o.textContent = `${dec}s`;
+        decadeFilter.appendChild(o);
+      });
+
+      const genres = Array.from(new Set(allFilms.map(f => String(f.Genre).trim()).filter(Boolean))).sort();
+      genreFilter.innerHTML = '<option value="All">All Genres</option>';
+      genres.forEach(g => {
+        const o = document.createElement('option');
+        o.value = g; o.textContent = g;
+        genreFilter.appendChild(o);
+      });
+
+      const movements = Array.from(new Set(allFilms.map(f => String(f.Movement).trim()).filter(Boolean))).sort();
+      currentFilter.innerHTML = '<option value="All">All Movements</option>';
+      movements.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c; o.textContent = c;
+        currentFilter.appendChild(o);
+      });
+
+      allSelects.forEach(s => s.addEventListener('change', onFilterChange));
+    }
+
+    function onFilterChange() {
+      if (!ready) return;
+      rebuildShuffled();
+      if (currentFilm) pickRandomFilm();
+    }
+
+    async function fetchFilms() {
+      try {
+        const res = await fetch(WEB_APP_URL);
+        allFilms = await res.json();
+        populateFilters();
+        rebuildShuffled();
+        ready = true;
+      } catch (e) {
+        showStatus('Failed to load films. Check your Apps Script URL.', 5000);
+      }
+    }
+
+    randomButton.addEventListener('click', () => {
+      if (!ready) return;
+      pickRandomFilm();
+    });
+
+    seenButton.addEventListener('click', async () => {
+      if (!currentFilm) return;
+      const filmToMark = currentFilm;
+
+      allFilms = allFilms.map(f =>
+        String(f.ID) === String(filmToMark.ID) ? { ...f, Seen: "Yes" } : f
+      );
+      rebuildShuffled();
+      pickRandomFilm();
+      showStatus('Marked as seen ✓');
+
+      try {
+        const res = await fetch(
+          `${WEB_APP_URL}?action=markSeen&ID=${encodeURIComponent(filmToMark.ID)}`
+        );
+        const json = await res.json();
+        if (json.status !== "ok") showStatus('Sheet update may have failed.', 4000);
+      } catch (e) {
+        showStatus('Sheet update failed — check your Apps Script.', 4000);
+      }
+    });
+
+    fetchFilms();
+  </script>
+</body>
+</html>
