@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Film Randomizer</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      background: black;
+      color: white;
+      font-family: Calibri, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 12px;
+      width: 90%;
+      max-width: 500px;
+    }
+    select {
+      padding: 10px 16px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+      box-sizing: border-box;
+      background: white;
+      color: black;
+    }
+    select optgroup {
+      font-weight: bold;
+      font-style: normal;
+      color: #333;
+      background: #eee;
+    }
+    select option {
+      font-weight: normal;
+      color: black;
+      background: white;
+    }
+    #filmCard {
+      margin-top: 30px;
+      margin-bottom: 220px;
+      line-height: 1.4;
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 0 20px;
+    }
+    #filmTitle    { font-size: 32px; font-weight: bold; line-height: 1.2; }
+    #filmYear     { font-size: 20px; margin-left: 8px; font-weight: normal; }
+    #filmRuntime  { font-size: 18px; margin-top: 8px; color: #ccc; }
+    #filmDirector { font-size: 16px; margin-top: 4px; color: #aaa; }
+    #filmMeta     { font-size: 14px; margin-top: 6px; color: #666; letter-spacing: 0.05em; text-transform: uppercase; }
+    #randomButton {
+      position: fixed; bottom: 30px;
+      padding: 20px 40px; font-size: 24px;
+      cursor: pointer; border: none;
+      background: white; color: black; border-radius: 10px;
+      touch-action: manipulation;
+    }
+    #seenButton {
+      position: fixed; bottom: 110px;
+      padding: 8px 16px; font-size: 13px;
+      cursor: pointer; border: none;
+      background: white; color: black; border-radius: 8px;
+      display: none;
+      touch-action: manipulation;
+    }
+    #status {
+      position: fixed; bottom: 155px;
+      font-size: 13px; color: #aaa; display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="filters">
+    <select id="directorFilter">
+      <option value="All">All Directors</option>
+      <optgroup label="Silent &amp; Early Cinema Pioneers">
+        <option value="__group__Silent & Early Cinema Pioneers">— Whole Group —</option>
+        <option value="Charlie Chaplin">Charlie Chaplin</option>
+        <option value="Sergei Eisenstein">Sergei Eisenstein</option>
+        <option value="Fritz Lang">Fritz Lang</option>
+        <option value="Carl Theodor Dreyer">Carl Theodor Dreyer</option>
+      </optgroup>
+      <optgroup label="Classical Hollywood &amp; Studio Era Masters">
+        <option value="__group__Classical Hollywood & Studio Era Masters">— Whole Group —</option>
+        <option value="Alfred Hitchcock">Alfred Hitchcock</option>
+        <option value="Orson Welles">Orson Welles</option>
+        <option value="John Ford">John Ford</option>
+        <option value="Howard Hawks">Howard Hawks</option>
+        <option value="Billy Wilder">Billy Wilder</option>
+        <option value="David Lean">David Lean</option>
+        <option value="John Huston">John Huston</option>
+      </optgroup>
+      <optgroup label="European Art Cinema &amp; New Waves">
+        <option value="__group__European Art Cinema & New Waves">— Whole Group —</option>
+        <option value="Jean-Luc Godard">Jean-Luc Godard</option>
+        <option value="François Truffaut">François Truffaut</option>
+        <option value="Agnès Varda">Agnès Varda</option>
+        <option value="Éric Rohmer">Éric Rohmer</option>
+        <option value="Federico Fellini">Federico Fellini</option>
+        <option value="Michelangelo Antonioni">Michelangelo Antonioni</option>
+        <option value="Luis Buñuel">Luis Buñuel</option>
+        <option value="Robert Bresson">Robert Bresson</option>
+        <option value="Jacques Tati">Jacques Tati</option>
+        <option value="Roberto Rossellini">Roberto Rossellini</option>
+        <option value="Pier Paolo Pasolini">Pier Paolo Pasolini</option>
+        <option value="Bernardo Bertolucci">Bernardo Bertolucci</option>
+        <option value="Rainer Werner Fassbinder">Rainer Werner Fassbinder</option>
+        <option value="Wim Wenders">Wim Wenders</option>
+      </optgroup>
+      <optgroup label="Global Masters (Mid–Late 20th Century)">
+        <option value="__group__Global Masters (Mid–Late 20th Century)">— Whole Group —</option>
+        <option value="Akira Kurosawa">Akira Kurosawa</option>
+        <option value="Yasujirō Ozu">Yasujirō Ozu</option>
+        <option value="Satyajit Ray">Satyajit Ray</option>
+        <option value="Andrei Tarkovsky">Andrei Tarkovsky</option>
+      </optgroup>
+      <optgroup label="New Hollywood &amp; American Auteur Boom">
+        <option value="__group__New Hollywood & American Auteur Boom">— Whole Group —</option>
+        <option value="Martin Scorsese">Martin Scorsese</option>
+        <option value="Francis Ford Coppola">Francis Ford Coppola</option>
+        <option value="Steven Spielberg">Steven Spielberg</option>
+        <option value="Robert Altman">Robert Altman</option>
+        <option value="Sidney Lumet">Sidney Lumet</option>
+        <option value="Roman Polanski">Roman Polanski</option>
+        <option value="Woody Allen">Woody Allen</option>
+        <option value="John Cassavetes">John Cassavetes</option>
+      </optgroup>
+      <optgroup label="Late 20th Century &amp; Modern International Auteurs">
+        <option value="__group__Late 20th Century & Modern International Auteurs">— Whole Group —</option>
+        <option value="Werner Herzog">Werner Herzog</option>
+        <option value="Terrence Malick">Terrence Malick</option>
+        <option value="David Lynch">David Lynch</option>
+        <option value="Krzysztof Kieślowski">Krzysztof Kieślowski</option>
+        <option value="Michael Haneke">Michael Haneke</option>
+        <option value="Pedro Almodóvar">Pedro Almodóvar</option>
+        <option value="Wong Kar-wai">Wong Kar-wai</option>
+        <option value="Abbas Kiarostami">Abbas Kiarostami</option>
+        <option value="Jane Campion">Jane Campion</option>
+        <option value="Claire Denis">Claire Denis</option>
+      </optgroup>
+      <optgroup label="Contemporary Global &amp; Hollywood Auteurs">
+        <option value="__group__Contemporary Global & Hollywood Auteurs">— Whole Group —</option>
+        <option value="Quentin Tarantino">Quentin Tarantino</option>
+        <option value="Christopher Nolan">Christopher Nolan</option>
+        <option value="Paul Thomas Anderson">Paul Thomas Anderson</option>
+        <option value="David Fincher">David Fincher</option>
+        <option value="Ridley Scott">Ridley Scott</option>
+        <option value="Denis Villeneuve">Denis Villeneuve</option>
+        <option value="Alfonso Cuarón">Alfonso Cuarón</option>
+        <option value="Ang Lee">Ang Lee</option>
+        <option value="Bong Joon-ho">Bong Joon-ho</option>
+        <option value="Park Chan-wook">Park Chan-wook</option>
+        <option value="Hirokazu Kore-eda">Hirokazu Kore-eda</option>
+        <option value="Asghar Farhadi">Asghar Farhadi</option>
+        <option value="Nuri Bilge Ceylan">Nuri Bilge Ceylan</option>
+        <option value="Béla Tarr">Béla Tarr</option>
+        <option value="Wes Anderson">Wes Anderson</option>
+        <option value="Sofia Coppola">Sofia Coppola</option>
+        <option value="Jim Jarmusch">Jim Jarmusch</option>
+        <option value="Céline Sciamma">Céline Sciamma</option>
+        <option value="David Cronenberg">David Cronenberg</option>
+      </optgroup>
+      <optgroup label="Genre &amp; Animation Auteurs">
+        <option value="__group__Genre & Animation Auteurs">— Whole Group —</option>
+        <option value="Sergio Leone">Sergio Leone</option>
+        <option value="John Carpenter">John Carpenter</option>
+        <option value="Hayao Miyazaki">Hayao Miyazaki</option>
+      </optgroup>
+    </select>
+
+    <select id="decadeFilter">
+      <option value="All">All Decades</option>
+    </select>
+
+    <select id="genreFilter">
+      <option value="All">All Genres</option>
+    </select>
+
+    <select id="movementFilter">
+      <option value="All">All Movements</option>
+    </select>
+
+    <select id="runtimeFilter">
+      <option value="All">Any Runtime</option>
+      <option value="short">Short (&lt;90 min)</option>
+      <option value="short_medium">Short &amp; Medium (&lt;120 min)</option>
+      <option value="medium">Medium (90–120 min)</option>
+      <option value="medium_long">Medium &amp; Long (&gt;90 min)</option>
+      <option value="long">Long (&gt;120 min)</option>
+    </select>
+
+    <select id="listFilter">
+      <option value="All">All Lists</option>
+    </select>
+  </div>
+
+  <div id="filmCard">
+    <div id="filmTitle"></div>
+    <div id="filmRuntime"></div>
+    <div id="filmDirector"></div>
+    <div id="filmMeta"></div>
+  </div>
+
+  <div id="status"></div>
+  <button id="seenButton">Mark as Seen</button>
+  <button id="randomButton">Randomize</button>
+
+  <script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyINoulc8xeElEXww186e1dsMv4LZTjkwhJJDhBeyDmzpDEcsCMVV6Pm-0FFSPvtydL/exec";
+
+    // Column mapping: ID | Name | Year | Runtime | Director | Movement | Genre | List | Seen
+
+    const DIRECTOR_GROUPS = {
+      "Silent & Early Cinema Pioneers": ["Charlie Chaplin","Sergei Eisenstein","Fritz Lang","Carl Theodor Dreyer"],
+      "Classical Hollywood & Studio Era Masters": ["Alfred Hitchcock","Orson Welles","John Ford","Howard Hawks","Billy Wilder","David Lean","John Huston"],
+      "European Art Cinema & New Waves": ["Jean-Luc Godard","François Truffaut","Agnès Varda","Éric Rohmer","Federico Fellini","Michelangelo Antonioni","Luis Buñuel","Robert Bresson","Jacques Tati","Roberto Rossellini","Pier Paolo Pasolini","Bernardo Bertolucci","Rainer Werner Fassbinder","Wim Wenders"],
+      "Global Masters (Mid–Late 20th Century)": ["Akira Kurosawa","Yasujirō Ozu","Satyajit Ray","Andrei Tarkovsky"],
+      "New Hollywood & American Auteur Boom": ["Martin Scorsese","Francis Ford Coppola","Steven Spielberg","Robert Altman","Sidney Lumet","Roman Polanski","Woody Allen","John Cassavetes"],
+      "Late 20th Century & Modern International Auteurs": ["Werner Herzog","Terrence Malick","David Lynch","Krzysztof Kieślowski","Michael Haneke","Pedro Almodóvar","Wong Kar-wai","Abbas Kiarostami","Jane Campion","Claire Denis"],
+      "Contemporary Global & Hollywood Auteurs": ["Quentin Tarantino","Christopher Nolan","Paul Thomas Anderson","David Fincher","Ridley Scott","Denis Villeneuve","Alfonso Cuarón","Ang Lee","Bong Joon-ho","Park Chan-wook","Hirokazu Kore-eda","Asghar Farhadi","Nuri Bilge Ceylan","Béla Tarr","Wes Anderson","Sofia Coppola","Jim Jarmusch","Céline Sciamma","David Cronenberg"],
+      "Genre & Animation Auteurs": ["Sergio Leone","John Carpenter","Hayao Miyazaki"]
+    };
+
+    let allFilms      = [];
+    let shuffledFilms = [];
+    let currentIndex  = 0;
+    let currentFilm   = null;
+    let ready         = false;
+
+    const filmTitleEl    = document.getElementById('filmTitle');
+    const filmRuntimeEl  = document.getElementById('filmRuntime');
+    const filmDirectorEl = document.getElementById('filmDirector');
+    const filmMetaEl     = document.getElementById('filmMeta');
+    const filmCardEl     = document.getElementById('filmCard');
+    const randomButton   = document.getElementById('randomButton');
+    const seenButton     = document.getElementById('seenButton');
+    const directorFilter = document.getElementById('directorFilter');
+    const decadeFilter   = document.getElementById('decadeFilter');
+    const genreFilter    = document.getElementById('genreFilter');
+    const movementFilter = document.getElementById('movementFilter');
+    const runtimeFilter  = document.getElementById('runtimeFilter');
+    const listFilter     = document.getElementById('listFilter');
+    const statusEl       = document.getElementById('status');
+
+    const allSelects = [directorFilter, decadeFilter, genreFilter, movementFilter, runtimeFilter, listFilter];
+
+    function showStatus(msg, duration = 2500) {
+      statusEl.textContent = msg;
+      statusEl.style.display = 'block';
+      setTimeout(() => { statusEl.style.display = 'none'; }, duration);
+    }
+
+    function formatRuntime(mins) {
+      const m = parseInt(mins);
+      if (isNaN(m) || m === 0) return '';
+      const h = Math.floor(m / 60);
+      const r = m % 60;
+      if (h === 0) return `${r}m`;
+      if (r === 0) return `${h}h`;
+      return `${h}h ${r}m`;
+    }
+
+    function runtimeBucket(mins) {
+      const m = parseInt(mins);
+      if (isNaN(m) || m === 0) return null;
+      if (m < 90)   return 'short';
+      if (m <= 120) return 'medium';
+      return 'long';
+    }
+
+    function runtimeMatches(mins, filter) {
+      const bucket = runtimeBucket(mins);
+      if (filter === 'All') return true;
+      if (filter === 'short') return bucket === 'short';
+      if (filter === 'medium') return bucket === 'medium';
+      if (filter === 'long') return bucket === 'long';
+      if (filter === 'short_medium') return bucket === 'short' || bucket === 'medium';
+      if (filter === 'medium_long') return bucket === 'medium' || bucket === 'long';
+      return true;
+    }
+
+    function getDecade(year) {
+      const y = parseInt(year);
+      if (isNaN(y)) return null;
+      return Math.floor(y / 10) * 10;
+    }
+
+    function primaryGenre(genreStr) {
+      if (!genreStr) return '';
+      return String(genreStr).split(/[,\/]/)[0].trim();
+    }
+
+    function allGenres(genreStr) {
+      if (!genreStr) return '';
+      return String(genreStr).split(/[,\/]/).map(g => g.trim()).filter(Boolean).join(' / ');
+    }
+
+    function getFiltered() {
+      const dirVal = directorFilter.value;
+      const dec    = decadeFilter.value;
+      const g      = genreFilter.value;
+      const mov    = movementFilter.value;
+      const rt     = runtimeFilter.value;
+      const lst    = listFilter.value;
+
+      let directorSet = null;
+      if (dirVal !== "All") {
+        if (dirVal.startsWith("__group__")) {
+          const groupName = dirVal.replace("__group__", "");
+          directorSet = new Set(DIRECTOR_GROUPS[groupName] || []);
+        } else {
+          directorSet = new Set([dirVal]);
+        }
+      }
+
+      let decadeFrom = null;
+      let decadeExact = null;
+      if (dec !== "All") {
+        if (dec.startsWith("from:")) {
+          decadeFrom = parseInt(dec.replace("from:", ""));
+        } else {
+          decadeExact = dec;
+        }
+      }
+
+      return allFilms.filter(f => {
+        if (String(f.Seen).trim() === "Yes") return false;
+        if (directorSet !== null && !directorSet.has(String(f.Director).trim())) return false;
+        if (decadeFrom !== null && getDecade(f.Year) < decadeFrom) return false;
+        if (decadeExact !== null && String(getDecade(f.Year)) !== decadeExact) return false;
+        if (g !== "All" && primaryGenre(f.Genre) !== g) return false;
+        if (mov !== "All" && String(f.Movement).trim() !== mov) return false;
+        if (!runtimeMatches(f.Runtime, rt)) return false;
+        if (lst !== "All" && String(f.List).trim() !== lst) return false;
+        return true;
+      });
+    }
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    // Rebuild shuffled queue from scratch — every film appears once before any repeat
+    function rebuildShuffled() {
+      shuffledFilms = shuffle(getFiltered());
+      currentIndex = 0;
+    }
+
+    function pickRandomFilm() {
+      // If we've exhausted the queue, reshuffle and start again
+      if (currentIndex >= shuffledFilms.length) {
+        rebuildShuffled();
+      }
+
+      if (shuffledFilms.length === 0) {
+        filmCardEl.style.display = "none";
+        seenButton.style.display = "none";
+        randomButton.textContent = "Randomize";
+        alert("No unseen films match the current filter!");
+        return;
+      }
+
+      currentFilm = shuffledFilms[currentIndex++];
+      filmTitleEl.innerHTML = `${currentFilm.Name} <span id="filmYear">(${currentFilm.Year})</span>`;
+      filmRuntimeEl.textContent = formatRuntime(currentFilm.Runtime);
+      filmDirectorEl.textContent = currentFilm.Director ? "Directed by " + currentFilm.Director : '';
+
+      // Meta line: all genres / movement
+      const genres = allGenres(currentFilm.Genre);
+      const movement = String(currentFilm.Movement || '').trim();
+      const metaParts = [genres, movement].filter(Boolean);
+      filmMetaEl.textContent = metaParts.join(', ');
+
+      filmCardEl.style.display = "flex";
+      seenButton.style.display = "block";
+      randomButton.textContent = "Randomize Again";
+    }
+
+    function populateFilters() {
+      allSelects.forEach(s => s.removeEventListener('change', onFilterChange));
+
+      // Decades
+      const decades = Array.from(new Set(allFilms.map(f => getDecade(f.Year)).filter(d => d !== null))).sort((a, b) => a - b);
+      decadeFilter.innerHTML = '<option value="All">All Decades</option>';
+      const fromGroup = document.createElement('optgroup');
+      fromGroup.label = 'From decade onward';
+      decades.forEach(dec => {
+        const o = document.createElement('option');
+        o.value = `from:${dec}`; o.textContent = `${dec}s onwards`;
+        fromGroup.appendChild(o);
+      });
+      decadeFilter.appendChild(fromGroup);
+      const exactGroup = document.createElement('optgroup');
+      exactGroup.label = 'Exact decade';
+      decades.forEach(dec => {
+        const o = document.createElement('option');
+        o.value = String(dec); o.textContent = `${dec}s`;
+        exactGroup.appendChild(o);
+      });
+      decadeFilter.appendChild(exactGroup);
+
+      // Genres — primary only for filtering
+      const genres = Array.from(new Set(allFilms.map(f => primaryGenre(f.Genre)).filter(Boolean))).sort();
+      genreFilter.innerHTML = '<option value="All">All Genres</option>';
+      genres.forEach(g => {
+        const o = document.createElement('option');
+        o.value = g; o.textContent = g;
+        genreFilter.appendChild(o);
+      });
+
+      // Movements
+      const movements = Array.from(new Set(allFilms.map(f => String(f.Movement).trim()).filter(Boolean))).sort();
+      movementFilter.innerHTML = '<option value="All">All Movements</option>';
+      movements.forEach(m => {
+        const o = document.createElement('option');
+        o.value = m; o.textContent = m;
+        movementFilter.appendChild(o);
+      });
+
+      // Lists
+      const lists = Array.from(new Set(allFilms.map(f => String(f.List).trim()).filter(Boolean))).sort();
+      listFilter.innerHTML = '<option value="All">All Lists</option>';
+      lists.forEach(l => {
+        const o = document.createElement('option');
+        o.value = l; o.textContent = l;
+        listFilter.appendChild(o);
+      });
+
+      allSelects.forEach(s => s.addEventListener('change', onFilterChange));
+    }
+
+    function onFilterChange() {
+      if (!ready) return;
+      rebuildShuffled();
+      if (currentFilm) pickRandomFilm();
+    }
+
+    const CACHE_KEY = 'filmRandomizerCache';
+    const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+    function loadFromCache() {
+      try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        if (!raw) return null;
+        const { timestamp, data } = JSON.parse(raw);
+        if (Date.now() - timestamp > CACHE_TTL) return null;
+        return data;
+      } catch (e) { return null; }
+    }
+
+    function saveToCache(data) {
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }));
+      } catch (e) {}
+    }
+
+    function initWithFilms(films) {
+      allFilms = films;
+      populateFilters();
+      rebuildShuffled();
+      ready = true;
+      randomButton.textContent = 'Randomize';
+      randomButton.disabled = false;
+    }
+
+    async function fetchFilms() {
+      // Load from cache instantly if available
+      const cached = loadFromCache();
+      if (cached) {
+        initWithFilms(cached);
+        // Silently refresh cache in background
+        fetch(WEB_APP_URL)
+          .then(r => r.json())
+          .then(fresh => saveToCache(fresh))
+          .catch(() => {});
+        return;
+      }
+      // No cache — show loading and wait
+      randomButton.textContent = 'Loading…';
+      randomButton.disabled = true;
+      try {
+        const res = await fetch(WEB_APP_URL);
+        const films = await res.json();
+        saveToCache(films);
+        initWithFilms(films);
+      } catch (e) {
+        randomButton.textContent = 'Randomize';
+        randomButton.disabled = false;
+        showStatus('Failed to load films. Check your Apps Script URL.', 5000);
+      }
+    }
+
+    randomButton.addEventListener('click', () => {
+      if (!ready) return;
+      pickRandomFilm();
+    });
+
+    seenButton.addEventListener('click', async () => {
+      if (!currentFilm) return;
+      const filmToMark = currentFilm;
+
+      allFilms = allFilms.map(f =>
+        String(f.ID) === String(filmToMark.ID) ? { ...f, Seen: "Yes" } : f
+      );
+      rebuildShuffled();
+      pickRandomFilm();
+      showStatus('Marked as seen ✓');
+
+      try {
+        const res = await fetch(
+          `${WEB_APP_URL}?action=markSeen&ID=${encodeURIComponent(filmToMark.ID)}`
+        );
+        const json = await res.json();
+        if (json.status !== "ok") showStatus('Sheet update may have failed.', 4000);
+      } catch (e) {
+        showStatus('Sheet update failed — check your Apps Script.', 4000);
+      }
+    });
+
+    fetchFilms();
+  </script>
+</body>
+</html>
